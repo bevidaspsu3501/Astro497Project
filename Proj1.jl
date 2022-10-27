@@ -4,6 +4,16 @@
 using Markdown
 using InteractiveUtils
 
+# This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
+macro bind(def, element)
+    quote
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local el = $(esc(element))
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
+        el
+    end
+end
+
 # ╔═╡ 5137cd65-ac89-4b99-9f16-fd5e05f49c72
 begin 
 	using PlutoUI, PlutoTest, PlutoTeachingTools
@@ -14,70 +24,20 @@ begin
 	using DelimitedFiles
 end
 
-# ╔═╡ 47ffab1d-476b-471d-856d-d1e7d51d03e9
-states = CSV.read(raw"Astro497Project/TOI_2022.10.26_09.08.14.csv" ,DataFrame)
+# ╔═╡ ede42a2f-53aa-4293-8f92-ee5cf5faa7d7
+ps = "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+distinct(pl_name),pl_orbper,pl_orbsmax,pl_rade,pl_masse,pl_dens,pl_eqt,pl_trandur,discoverymethod,disc_facility+from+ps+where+tran_flag+=+1+and+discoverymethod+=+'Transit'+order+by+disc_facility+desc+&format=csv"
 
-# ╔═╡ 8f3f91e7-544e-4149-9ec1-312a346ef5f2
-states_dict = Dict(
-    "headers" => [Dict("text" => "Name", "value" => "name"), Dict("text" => "Abbreviation", "value" => "abbrev"), Dict("text" => "FIPS", "value" => "fips")],
-    "states" => [Dict("name" => states[1][i,1], "abbrev" => states[1][i,2], "fips" => states[1][i,3]) for i in 1:size(states[1],1)]
-)
-
-# ╔═╡ e8b14cdd-690a-4fbe-b037-3b73fca8cf96
+# ╔═╡ 7d0ca834-4a43-4682-bddb-1de954e39995
 begin
 	datadir = joinpath(pwd(),"data")
 	mkpath(datadir)
 end
 
-# ╔═╡ bad0e1bd-7975-4c05-be13-3def322796d7
+# ╔═╡ ec217b95-7b2d-4b15-b5ab-07a6a909f8d3
 begin
-	make_tap_query_url_url = "#" * (PlutoRunner.currently_running_cell_id |> string)
-"""
-`make_tap_query_url(base_url, table_name; ...)`
-
-Returns url for a Table Access Protocol (TAP) query.
-Inputs:
-- base url 
-- table name
-Optional arguments (and default):
-- `max_rows` (all)
-- `select_cols` (all)
-- `where` (no requirements)
-- `order_by_cols` (not sorted)
-- `format` (tsv)
-See [NExScI](https://exoplanetarchive.ipac.caltech.edu/docs/TAP/usingTAP.html#sync) or [Virtual Observatory](https://www.ivoa.net/documents/TAP/) for more info.
-"""
-function make_tap_query_url(query_base_url::String, query_table::String; max_rows::Integer = 0, select_cols::String = "", where::String = "", order_by_cols::String = "", format::String="tsv" )
-	
-	query_select = "select"
-	if max_rows > 0 
-		query_select *= "+top+" * string(max_rows)
-	end
-	if length(select_cols) >0
-		query_select *= "+" * select_cols 
-	else
-		query_select *= "+*"
-	end
-	query_from = "+from+" * query_table
-	query_where = length(where)>0 ? "+where+" * where : ""
-	query_order_by = length(order_by_cols) > 0 ? "+order+by+" * order_by_cols : ""
-	query_format = "&format=" * format
-	url = query_base_url * query_select * query_from * query_where * query_order_by * query_format
-end
-end
-
-# ╔═╡ be4a8f30-5539-11ed-11ab-cf66b096b1f8
-begin
-	nexsci_query_base_url = "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query= select+schema_name,table_name+from+TAP_SCHEMA.tables"
-	planeary_systems_table = "ps"
-	url_get_ps_table = make_tap_query_url(nexsci_query_base_url, planeary_systems_table, where="default_flag=1")
-end
-
-# ╔═╡ efb70a08-1031-47fa-bde4-363a6fbf2ff1
-begin
-	filename_ps = joinpath(datadir,"nexsci_ps.tsv")
+	filename_ps = joinpath(datadir,"nexsci_ps21.csv")
 	if !isfile(filename_ps) || filesize(filename_ps)==0
-		Downloads.download(url_get_ps_table, filename_ps)
+		Downloads.download(ps, filename_ps)
 		fresh_data_ps = true  
 	else
 		fresh_data_ps = false
@@ -85,42 +45,40 @@ begin
 	@test filesize(filename_ps) >0	
 end
 
-# ╔═╡ 9f41cd78-f769-41d1-8e66-0ad609ad74c9
-function data_table(data)
-	return HTML("""
-		<link href="https://cdn.jsdelivr.net/npm/@mdi/font@5.x/css/materialdesignicons.min.css" rel="stylesheet">
-		<link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+# ╔═╡ f6b70304-bcc1-4933-9177-495cafe75a99
+begin
+	fresh_data_ps # tells Pluto to wait to run this cell until after data download
+	df_ps_raw = CSV.read(filename_ps,DataFrame)
+end
 
-	  <div id="app">
-		<v-app>
-		  <v-data-table
-		  :headers="headers"
-		  :items="states"
-		></v-data-table>
-		</v-app>
-	  </div>
+# ╔═╡ 7f4c80ec-e88d-4124-b826-716dac428978
+begin
+	df_by_fac = df_ps_raw
+	try
+	df_by_fac = df_ps_raw |> @groupby( _.disc_facility ) |> @map( {bjd = _.d, rad = _.rade, mass = _.masse, inst= key(_), nobs_inst=length(_) }) |> df_ps_raw;
+	catch
+	end
+end;
 
-	  <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
-	  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
-	
-	<script>
-		new Vue({
-		  el: '#app',
-		  vuetify: new Vuetify(),
-		  data () {
-				return $data
-			}
-		})
-	</script>
-	<style>
-		.v-application--wrap {
-			min-height: 10vh;
-		}
-		.v-data-footer__select {
-			display: none;
-		}
-	</style>
-	""")
+# ╔═╡ b7470c8e-615a-41c1-8e75-5c3802f18831
+ begin  # Make more useful observatory/instrument labels
+	instrument_label = Dict(zip(["XO","WASP-South"],["XO","WASP-South"]))
+	for k in keys(instrument_label)
+		if k ∉ df_by_fac.disc_facility
+			delete!(instrument_label,k)
+		end
+	end
+	instrument_label
+end;
+ #Gotta figure out how to graph these now, and also select more groups to analyze
+
+# ╔═╡ 244f32e4-bc58-4ff6-94eb-36ced9b7a11e
+begin
+	select_obs_cell_id = PlutoRunner.currently_running_cell_id[] |> string
+	select_obs_cell_url = "#$(select_obs_cell_id)"
+	md"""
+Select which instrument's data to analyze below: $(@bind inst_to_plt Select(collect(values(instrument_label)); default="Keck (post)"))
+"""
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -1274,13 +1232,13 @@ version = "1.4.1+0"
 """
 
 # ╔═╡ Cell order:
-# ╠═be4a8f30-5539-11ed-11ab-cf66b096b1f8
-# ╠═efb70a08-1031-47fa-bde4-363a6fbf2ff1
-# ╠═47ffab1d-476b-471d-856d-d1e7d51d03e9
-# ╠═8f3f91e7-544e-4149-9ec1-312a346ef5f2
+# ╠═ede42a2f-53aa-4293-8f92-ee5cf5faa7d7
+# ╠═ec217b95-7b2d-4b15-b5ab-07a6a909f8d3
+# ╠═f6b70304-bcc1-4933-9177-495cafe75a99
+# ╠═7f4c80ec-e88d-4124-b826-716dac428978
+# ╠═b7470c8e-615a-41c1-8e75-5c3802f18831
+# ╟─244f32e4-bc58-4ff6-94eb-36ced9b7a11e
 # ╠═5137cd65-ac89-4b99-9f16-fd5e05f49c72
-# ╠═e8b14cdd-690a-4fbe-b037-3b73fca8cf96
-# ╟─bad0e1bd-7975-4c05-be13-3def322796d7
-# ╠═9f41cd78-f769-41d1-8e66-0ad609ad74c9
+# ╠═7d0ca834-4a43-4682-bddb-1de954e39995
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
