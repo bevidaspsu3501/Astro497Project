@@ -4,16 +4,6 @@
 using Markdown
 using InteractiveUtils
 
-# This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
-macro bind(def, element)
-    quote
-        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
-        local el = $(esc(element))
-        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
-        el
-    end
-end
-
 # ╔═╡ 5137cd65-ac89-4b99-9f16-fd5e05f49c72
 begin 
 	using PlutoUI, PlutoTest, PlutoTeachingTools
@@ -51,34 +41,22 @@ begin
 	df_ps_raw = CSV.read(filename_ps,DataFrame)
 end
 
-# ╔═╡ 7f4c80ec-e88d-4124-b826-716dac428978
+# ╔═╡ e6886cfc-09e6-4753-843c-38ae17a75370
 begin
-	df_by_fac = df_ps_raw
-	try
-	df_by_fac = df_ps_raw |> @groupby( _.disc_facility ) |> @map( {bjd = _.d, rad = _.rade, mass = _.masse, inst= key(_), nobs_inst=length(_) }) |> df_ps_raw;
-	catch
+	plt_rv_all_inst = plot() #legend=:none, widen=true)
+	local num_inst = size(df_ps_raw,1)
+	for inst in 1:num_inst
+		rvoffset = mean(df_ps_raw[inst,:pl_rade])
+		scatter!(plt_rv_all_inst,df_ps_raw[inst,:bjd].-t_offset,
+				df_ps_raw[inst,:pl_rade].-rvoffset,
+				yerr=collect(df_ps_raw[inst,:σrv]),
+				label=instrument_label[df_ps_raw[inst,:inst]], markercolor=inst)
+				#markersize=4*upscale, legendfontsize=upscale*12
 	end
-end;
-
-# ╔═╡ b7470c8e-615a-41c1-8e75-5c3802f18831
- begin  # Make more useful observatory/instrument labels
-	instrument_label = Dict(zip(["XO","WASP-South"],["XO","WASP-South"]))
-	for k in keys(instrument_label)
-		if k ∉ df_by_fac.disc_facility
-			delete!(instrument_label,k)
-		end
-	end
-	instrument_label
-end;
- #Gotta figure out how to graph these now, and also select more groups to analyze
-
-# ╔═╡ 244f32e4-bc58-4ff6-94eb-36ced9b7a11e
-begin
-	select_obs_cell_id = PlutoRunner.currently_running_cell_id[] |> string
-	select_obs_cell_url = "#$(select_obs_cell_id)"
-	md"""
-Select which instrument's data to analyze below: $(@bind inst_to_plt Select(collect(values(instrument_label)); default="Keck (post)"))
-"""
+	xlabel!(plt_rv_all_inst,"Time (d)")
+	ylabel!(plt_rv_all_inst,"RV (m/s)")
+	title!(plt_rv_all_inst,"HD " * star_name )
+	plt_rv_all_inst
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -1235,9 +1213,7 @@ version = "1.4.1+0"
 # ╠═ede42a2f-53aa-4293-8f92-ee5cf5faa7d7
 # ╠═ec217b95-7b2d-4b15-b5ab-07a6a909f8d3
 # ╠═f6b70304-bcc1-4933-9177-495cafe75a99
-# ╠═7f4c80ec-e88d-4124-b826-716dac428978
-# ╠═b7470c8e-615a-41c1-8e75-5c3802f18831
-# ╟─244f32e4-bc58-4ff6-94eb-36ced9b7a11e
+# ╠═e6886cfc-09e6-4753-843c-38ae17a75370
 # ╠═5137cd65-ac89-4b99-9f16-fd5e05f49c72
 # ╠═7d0ca834-4a43-4682-bddb-1de954e39995
 # ╟─00000000-0000-0000-0000-000000000001
