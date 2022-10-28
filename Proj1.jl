@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.11
+# v0.19.13
 
 using Markdown
 using InteractiveUtils
@@ -12,6 +12,12 @@ begin
 	using StatsBase: mean, std
 	using Plots, ColorSchemes
 	using DelimitedFiles
+end
+
+# ╔═╡ 87f32b65-3b15-4e27-a65b-7d1d4653c422
+begin
+	using PyCall
+	lk = pyimport("lightkurve")
 end
 
 # ╔═╡ ede42a2f-53aa-4293-8f92-ee5cf5faa7d7
@@ -59,6 +65,25 @@ begin
 	plt_rv_all_inst
 end
 
+# ╔═╡ 5217ed02-d8b5-44b3-9916-b7e20ce7d1e7
+begin 
+	target = "Kepler-16"  
+	author = "Kepler"
+	mission = "TESS"
+end;
+
+# ╔═╡ a07a8eaf-b857-45d5-80d5-3de45f7920e4
+search_result = lk.search_lightcurve(target, mission=mission)
+
+# ╔═╡ cb26e9c7-9a40-47f5-8548-c6beff25aeb8
+typeof(author)
+
+# ╔═╡ db7c5839-1355-45cf-9379-3f7137d8ed4b
+names = search_result.author
+
+# ╔═╡ ce7003e5-b398-4393-90a5-6435fb8b09ed
+
+
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
@@ -72,6 +97,7 @@ Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 PlutoTeachingTools = "661c6b06-c737-4d37-b85c-46df65de6f69"
 PlutoTest = "cb4044da-4d16-4ffa-a6a3-8cad7f73ebdc"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+PyCall = "438e738f-606a-5dbb-bf0a-cddfbfd45ab0"
 Query = "1a8c2f83-1ff3-5112-b086-8aa67b057ba1"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 
@@ -84,6 +110,7 @@ Plots = "~1.35.5"
 PlutoTeachingTools = "~0.2.3"
 PlutoTest = "~0.2.2"
 PlutoUI = "~0.7.48"
+PyCall = "~1.94.1"
 Query = "~1.0.0"
 StatsBase = "~0.33.21"
 """
@@ -190,6 +217,12 @@ version = "4.3.0"
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
+
+[[deps.Conda]]
+deps = ["Downloads", "JSON", "VersionParsing"]
+git-tree-sha1 = "6e47d11ea2776bc5627421d59cdcc1296c058071"
+uuid = "8f4d0f93-b110-5947-807f-2305c1781a2d"
+version = "1.7.0"
 
 [[deps.Contour]]
 git-tree-sha1 = "d05d9e7b7aedff4e5b51a029dced05cfb6125781"
@@ -765,6 +798,12 @@ version = "2.1.2"
 deps = ["Unicode"]
 uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 
+[[deps.PyCall]]
+deps = ["Conda", "Dates", "Libdl", "LinearAlgebra", "MacroTools", "Serialization", "VersionParsing"]
+git-tree-sha1 = "53b8b07b721b77144a0fbbbc2675222ebf40a02d"
+uuid = "438e738f-606a-5dbb-bf0a-cddfbfd45ab0"
+version = "1.94.1"
+
 [[deps.Qt5Base_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Fontconfig_jll", "Glib_jll", "JLLWrappers", "Libdl", "Libglvnd_jll", "OpenSSL_jll", "Pkg", "Xorg_libXext_jll", "Xorg_libxcb_jll", "Xorg_xcb_util_image_jll", "Xorg_xcb_util_keysyms_jll", "Xorg_xcb_util_renderutil_jll", "Xorg_xcb_util_wm_jll", "Zlib_jll", "xkbcommon_jll"]
 git-tree-sha1 = "c6c0f690d0cc7caddb74cef7aa847b824a16b256"
@@ -975,6 +1014,11 @@ version = "0.4.1"
 git-tree-sha1 = "ca0969166a028236229f63514992fc073799bb78"
 uuid = "41fe7b60-77ed-43a1-b4f0-825fd5a5650d"
 version = "0.2.0"
+
+[[deps.VersionParsing]]
+git-tree-sha1 = "58d6e80b4ee071f5efd07fda82cb9fbe17200868"
+uuid = "81def892-9a0e-5fdd-b105-ffc91e053289"
+version = "1.3.0"
 
 [[deps.Wayland_jll]]
 deps = ["Artifacts", "Expat_jll", "JLLWrappers", "Libdl", "Libffi_jll", "Pkg", "XML2_jll"]
@@ -1216,5 +1260,11 @@ version = "1.4.1+0"
 # ╠═e6886cfc-09e6-4753-843c-38ae17a75370
 # ╠═5137cd65-ac89-4b99-9f16-fd5e05f49c72
 # ╠═7d0ca834-4a43-4682-bddb-1de954e39995
+# ╠═87f32b65-3b15-4e27-a65b-7d1d4653c422
+# ╠═5217ed02-d8b5-44b3-9916-b7e20ce7d1e7
+# ╠═a07a8eaf-b857-45d5-80d5-3de45f7920e4
+# ╠═cb26e9c7-9a40-47f5-8548-c6beff25aeb8
+# ╠═db7c5839-1355-45cf-9379-3f7137d8ed4b
+# ╠═ce7003e5-b398-4393-90a5-6435fb8b09ed
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
