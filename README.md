@@ -1,2 +1,2 @@
-# Astro497Project
-This is our Astro 497 project
+# Checkpoint 1
+Changing from our initial project plan, we are going to find potential planet candidates from the corresponding lught curves found on MAST. To do this, we have imported tables to eventually join them to create a better data set for analysis. Bill and I are still figuring out which models we are going to fit the data with, but we are going to include one or two linear relationships of some kind. For the second table, the initial code has been very slightly modified. We changed the second part of the lk.search_result code to use the sector instead of the author. 
