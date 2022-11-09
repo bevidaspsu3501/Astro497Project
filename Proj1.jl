@@ -73,7 +73,7 @@ begin
 end;
 
 # ╔═╡ a07a8eaf-b857-45d5-80d5-3de45f7920e4
-search_result = lk.search_lightcurve(target, mission=mission)
+search_result = lk.search_lightcurve(target, author=author)
 
 # ╔═╡ cb26e9c7-9a40-47f5-8548-c6beff25aeb8
 typeof(author)
