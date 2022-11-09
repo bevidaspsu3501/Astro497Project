@@ -21,7 +21,7 @@ begin
 end
 
 # ╔═╡ ede42a2f-53aa-4293-8f92-ee5cf5faa7d7
-ps = "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+distinct(pl_name),pl_orbper,pl_orbsmax,pl_rade,pl_masse,pl_dens,pl_eqt,pl_trandur,discoverymethod,disc_facility+from+ps+where+tran_flag+=+1+and+discoverymethod+=+'Transit'+order+by+disc_facility+desc+&format=csv"
+ps = "https://exofop.ipac.caltech.edu/tess/download_toi.php?sort=toi&output=csv"
 
 # ╔═╡ 7d0ca834-4a43-4682-bddb-1de954e39995
 begin
@@ -31,7 +31,7 @@ end
 
 # ╔═╡ ec217b95-7b2d-4b15-b5ab-07a6a909f8d3
 begin
-	filename_ps = joinpath(datadir,"nexsci_ps21.csv")
+	filename_ps = joinpath(datadir,"nexsci_ps22.csv")
 	if !isfile(filename_ps) || filesize(filename_ps)==0
 		Downloads.download(ps, filename_ps)
 		fresh_data_ps = true  
@@ -47,42 +47,21 @@ begin
 	df_ps_raw = CSV.read(filename_ps,DataFrame)
 end
 
-# ╔═╡ e6886cfc-09e6-4753-843c-38ae17a75370
-begin
-	plt_rv_all_inst = plot() #legend=:none, widen=true)
-	local num_inst = size(df_ps_raw,1)
-	for inst in 1:num_inst
-		rvoffset = mean(df_ps_raw[inst,:pl_rade])
-		scatter!(plt_rv_all_inst,df_ps_raw[inst,:bjd].-t_offset,
-				df_ps_raw[inst,:pl_rade].-rvoffset,
-				yerr=collect(df_ps_raw[inst,:σrv]),
-				label=instrument_label[df_ps_raw[inst,:inst]], markercolor=inst)
-				#markersize=4*upscale, legendfontsize=upscale*12
-	end
-	xlabel!(plt_rv_all_inst,"Time (d)")
-	ylabel!(plt_rv_all_inst,"RV (m/s)")
-	title!(plt_rv_all_inst,"HD " * star_name )
-	plt_rv_all_inst
-end
-
 # ╔═╡ 5217ed02-d8b5-44b3-9916-b7e20ce7d1e7
 begin 
 	target = "Kepler-16"  
-	author = "Kepler"
+	author = "TESScut"
 	mission = "TESS"
 end;
 
 # ╔═╡ a07a8eaf-b857-45d5-80d5-3de45f7920e4
-search_result = lk.search_lightcurve(target, author=author)
-
-# ╔═╡ cb26e9c7-9a40-47f5-8548-c6beff25aeb8
-typeof(author)
+search_result = lk.search_lightcurve("TIC 231663901" , mission= "TESS")
 
 # ╔═╡ db7c5839-1355-45cf-9379-3f7137d8ed4b
-names = search_result.author
+lc = search_result.download()
 
-# ╔═╡ ce7003e5-b398-4393-90a5-6435fb8b09ed
-
+# ╔═╡ e4cb8a1b-a20c-436f-a03f-016d9d207877
+lc.plot()
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1257,14 +1236,12 @@ version = "1.4.1+0"
 # ╠═ede42a2f-53aa-4293-8f92-ee5cf5faa7d7
 # ╠═ec217b95-7b2d-4b15-b5ab-07a6a909f8d3
 # ╠═f6b70304-bcc1-4933-9177-495cafe75a99
-# ╠═e6886cfc-09e6-4753-843c-38ae17a75370
 # ╠═5137cd65-ac89-4b99-9f16-fd5e05f49c72
 # ╠═7d0ca834-4a43-4682-bddb-1de954e39995
 # ╠═87f32b65-3b15-4e27-a65b-7d1d4653c422
 # ╠═5217ed02-d8b5-44b3-9916-b7e20ce7d1e7
 # ╠═a07a8eaf-b857-45d5-80d5-3de45f7920e4
-# ╠═cb26e9c7-9a40-47f5-8548-c6beff25aeb8
 # ╠═db7c5839-1355-45cf-9379-3f7137d8ed4b
-# ╠═ce7003e5-b398-4393-90a5-6435fb8b09ed
+# ╠═e4cb8a1b-a20c-436f-a03f-016d9d207877
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
