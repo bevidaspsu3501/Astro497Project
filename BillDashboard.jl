@@ -17,6 +17,7 @@ begin
 	using Distributions, Random
 	using Colors, FixedPointNumbers
 	using Interact
+	using Transits 
 end
 
 # ╔═╡ 0a07809c-9c2e-4591-9fae-4821e487cbe8
@@ -25,44 +26,20 @@ begin
 	lk = pyimport("lightkurve")
 end
 
+# ╔═╡ 84119b52-a679-40e4-aa15-885770212020
+md"""
+First we are assigning the url to a name of ps
+"""
+
 # ╔═╡ 3c432a5c-629e-11ed-35fc-8d6d0c7785ae
 ps = "https://exofop.ipac.caltech.edu/tess/downloadSS_toi.php?sort=toi&output=csv"
 
-# ╔═╡ 40b35663-350f-4857-a0a7-2d6c433c7a0f
-begin 
-	target = "TIC231663901"  
-	author = "TESS"
-	mission = "TESS"
-end;
+# ╔═╡ 54d317cc-61f7-4b77-b6e1-b503fccea6c3
+md"""
+Next we are making a file for where this specific data is stored
+"""
 
-# ╔═╡ a5ff72e9-d932-465c-b5f0-017bbbeca52f
-search_result = lk.search_lightcurve(target,mission=mission)
-
-# ╔═╡ c4262261-b9b5-4c52-b4b9-867d27d8ef12
-lc = search_result.download()
-
-# ╔═╡ 313e3b92-1bff-4ac1-9788-354994376d91
-begin
-pixelfile = lk.search_targetpixelfile("Trappist-1")[1].download()
-lc1 = pixelfile.to_lightcurve(method="pld").remove_outliers().flatten()
-period = lc1.to_periodogram("bls").period_at_max_power
-lc1.fold(period).truncate(-.5,-.25).scatter()
-end
-
-# ╔═╡ 3f141677-8030-4b61-8840-77d38f30b156
-begin
-	t = lc.time[:value]
-	y = lc.flux[:value]
-	yerr = lc.flux_err[:value]
-end
-
-# ╔═╡ 464f58e1-13e9-40f7-b5d2-679454422a73
-results = BLS(t,y,yerr,duration=0.16)
-
-# ╔═╡ b22e8c68-ccde-4b58-b55f-88a37bb15324
-BoxLeastSquares.params(results)
-
-# ╔═╡ a4f4dfac-6f2c-4384-8a07-d84e2b926557
+# ╔═╡ da4af2f8-2388-4ac4-b681-bbc123d8a214
 begin 
 	datadir = joinpath(pwd(),"data")
 	mkpath(datadir)
@@ -80,23 +57,168 @@ begin
 	@test filesize(filename_ps) >0	
 end
 
+# ╔═╡ ca258594-ff04-4319-b91b-f7c44cdb5592
+md"""
+The next few steps are consisting of making the data into a table and reading it in as a csv file, describing the data,  and finding the real and string number components of the data set.
+"""
+
 # ╔═╡ 38775657-6468-46a1-acde-8259ccd705b7
 begin
 	fresh_data_ps # tells Pluto to wait to run this cell until after data download
 	df_ps_raw = CSV.read(filename_ps,DataFrame)
 end
 
-# ╔═╡ bdcecf5a-75cc-4025-8716-3c4e58ee97e4
+# ╔═╡ 6b1b523b-fd14-48be-aec8-49eb082fdd72
+describe(df_ps_raw)
+
+# ╔═╡ 35cbed4c-cd70-4bd2-8db9-c4d5afc06d77
+ncol(df_ps_raw)
+
+# ╔═╡ d1d538ae-8734-468a-9665-dcd0c8d7e25f
+md"""
+Next, we are defining the target number, author, and mission so we can extract TESS light curve data. One of the next steps in this process will be to figure out how we can make it so the target is chosen by the user.
+"""
+
+# ╔═╡ 40b35663-350f-4857-a0a7-2d6c433c7a0f
+begin 
+	target = "TIC231663901"  
+	author = "TESS"
+	mission = "TESS"
+end;
+
+# ╔═╡ a5ff72e9-d932-465c-b5f0-017bbbeca52f
+search_result = lk.search_lightcurve(target,mission=mission)
+
+# ╔═╡ c4262261-b9b5-4c52-b4b9-867d27d8ef12
+lc = search_result.download()
+
+# ╔═╡ e0cafdfc-0ce3-41d0-8c66-ccae734d6015
+md"""
+Next we start to plot the data so we are able to see it and then fit a simple boxleastsquares model in order to predict parameters for our limb darkening model. We start by defining the 2 variables we are plotting and then selecting the errro in the flux for the paramaters later.
+"""
+
+# ╔═╡ d44dd121-2b06-4bc2-b343-024f4edbf5b4
+begin
+	t = lc.time[:value]
+	y = lc.flux[:value]
+	yerr = lc.flux_err[:value]
+end
+
+# ╔═╡ f4777597-477a-4bf0-b5d0-18f4da39bd1b
+let  
+	scalefontsizes()    
+	scalefontsizes(2) 
+	my_font = "Computer Modern"
+	my_palette = ColorSchemes.:jet1 
+
+	plt = plot(legend=:none, size=(1000,700), widen=false, 
+			fontfamily=my_font,  
+			thickness_scaling=.6,  
+			)
+
+	title!(plt,"Plot of flux versus time")
+	xlabel!(plt,"time")
+	ylabel!(plt,"flux")
+	
+	scatter!(plt, t,y, markercolor=28, markersize=4.5, markershape=:circle, markerstrokewidth=2, markeralpha=1.0)
+	
+	savefig(plt, "fig1.pdf")
+	plt
+end
+
+# ╔═╡ 72fac2fc-914a-45df-9332-22a19e49f2bf
+md"""
+Here we use the BoxLeastSquares function in order to find the paramater.
+"""
+
+# ╔═╡ 464f58e1-13e9-40f7-b5d2-679454422a73
+results = BLS(t,y,yerr,duration=0.16)
+
+# ╔═╡ b22e8c68-ccde-4b58-b55f-88a37bb15324
+BoxLeastSquares.params(results)
+
+# ╔═╡ ef8894a0-b177-4f6a-b3ed-3f66d17ccd11
+md"""
+For this first model, we are able to define the period and duration of the orbit and use this for the limb darkening data.
+"""
+
+# ╔═╡ f0d1e7d2-1b05-4f2e-8505-3c57a15020f2
+md"""
+Now we are going to try and fit the limb darkening model. I am having trouble plotting the data because SimpleOrbit is supposedly note defined. This is something we are going to have to work on.
+"""
+
+# ╔═╡ b5fc39f3-e2e5-4cc2-a052-5074c267f609
+md"""
+# Functions
+"""
+
+# ╔═╡ 820b321d-2c8a-48b9-a70f-bb2ef303908a
+function SimpleOrbit(;period, duration, t0=zero(period), b=0)
+    half_period = 0.5 * period
+    duration > half_period && error("duration cannot be longer than half the period")
+    speed = 2.0 * sqrt(1.0 - b^2) / duration
+    ref_time =  t0 - half_period
+    SimpleOrbit(period, t0, b, duration, speed, half_period, ref_time)
+end
+
+# ╔═╡ b9d7e082-7d25-412e-b9da-6444f71f9420
+begin
+	orbit = SimpleOrbit(;period=.32, duration=.16)
+	u = [0.4, 0.26] # quad limb dark
+	ld = PolynomialLimbDark(u)
+	
+	t1 = range(-1, 1, length=1000) # days from t0
+	rs = range(0, 0.2, length=10) # radius ratio
+	
+	fluxes = @. ld(orbit, t1, rs')
+end
+
+# ╔═╡ a33f011b-2eb1-4eb5-86f6-ff2883577fcb
+begin
+	ld2 = IntegratedLimbDark([0.4, 0.26])
+	orbit2 = SimpleOrbit(period=3, duration=1)
+	t2 = range(-1, 1, length=1000)
+	texp = [0.1 0.2 0.3]
+	# no extra calculations made
+	flux = @. ld(orbit, t, 0.2)
+	# use quadrature to find time-averaged flux for each t
+	flux_int = @. ld(orbit, t, 0.2, texp)
+end
+
+# ╔═╡ 8b8091e6-119c-4f05-b6ad-809ca504c95f
 function transform_pallete(cs::ColorSchemes.ColorScheme)
 	ColorScheme(cvd_dict[cvd].(cs))
 end
 
-# ╔═╡ f19221f5-d843-4fdf-a4e9-4b14a5c11bfd
-begin
-	cvd_names = ["None", "Protanopic","Deuteranopic","Tritanopic","Greyscale"]
-	cvd_funcs = [identity, protanopic, deuteranopic, tritanopic,Gray]
-	cvd_dict = Dict(zip(cvd_names,cvd_funcs))
-end;
+# ╔═╡ 4052a896-1a68-4084-91a5-9dd1b37792cf
+function get_cols_containing_type(df::DataFrame, type::Type)
+		filter(c->eltype(df[!,c])<:Union{Missing,type}, names(df) )
+end
+
+# ╔═╡ 32c9fda5-3746-4f74-bad6-db94026b4ab0
+get_cols_containing_real(df) = get_cols_containing_type(df,Real)
+
+# ╔═╡ 7146d1f9-3b62-4e79-9e2d-8351579f5fff
+describe(df_ps_raw, cols=get_cols_containing_real(df_ps_raw) )
+
+# ╔═╡ 51ba32ea-ae3f-4e10-a1c4-61a24a5a9698
+get_cols_containing_string(df) = get_cols_containing_type(df,AbstractString)
+
+# ╔═╡ af5bb52a-63d0-4fcc-bc3d-cebbc368bf7b
+describe(df_ps_raw, :first, :last, :nmissing, :nunique, cols=get_cols_containing_string(df_ps_raw) )
+
+# ╔═╡ ef2cb094-156d-418e-b591-b479fc538138
+md"""
+# CVD
+"""
+
+# ╔═╡ bbb7e112-9e53-4549-a0e8-3b7141111ced
+
+
+# ╔═╡ 2d20ce14-61f3-45a4-bc30-02b596d90cf4
+md"""
+# Packages
+"""
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -123,6 +245,7 @@ Query = "1a8c2f83-1ff3-5112-b086-8aa67b057ba1"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
+Transits = "2e59a628-7bac-4d38-8059-3a73ba0928ab"
 
 [compat]
 BoxLeastSquares = "~0.2.0"
@@ -144,6 +267,7 @@ PyCall = "~1.94.1"
 Query = "~1.0.0"
 StatsBase = "~0.33.21"
 StatsPlots = "~0.15.4"
+Transits = "~0.4.0"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -170,6 +294,11 @@ deps = ["LinearAlgebra"]
 git-tree-sha1 = "195c5505521008abea5aee4f96930717958eac6f"
 uuid = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
 version = "3.4.0"
+
+[[deps.ArgCheck]]
+git-tree-sha1 = "a3a402a35a2f7e0b87828ccabbd5ebfbebe356b4"
+uuid = "dce04be8-c92d-5529-be00-80e4d2c0e197"
+version = "2.3.0"
 
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
@@ -201,6 +330,12 @@ git-tree-sha1 = "b25e88db7944f98789130d7b503276bc34bc098e"
 uuid = "bf4720bc-e11a-5d0c-854e-bdca1663c893"
 version = "0.1.0"
 
+[[deps.AstroLib]]
+deps = ["Dates", "DelimitedFiles", "LinearAlgebra", "Printf", "StaticArrays"]
+git-tree-sha1 = "690241982681c0fec3d064ee6995d6029b86d80d"
+uuid = "c7932e45-9af1-51e7-9da9-f004cd3a462b"
+version = "0.4.2"
+
 [[deps.AxisAlgorithms]]
 deps = ["LinearAlgebra", "Random", "SparseArrays", "WoodburyMatrices"]
 git-tree-sha1 = "66771c8d21c8ff5e3a93379480a2307ac36863f7"
@@ -209,6 +344,12 @@ version = "1.0.1"
 
 [[deps.Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
+
+[[deps.Bijectors]]
+deps = ["ArgCheck", "ChainRulesCore", "ChangesOfVariables", "Compat", "Distributions", "Functors", "InverseFunctions", "IrrationalConstants", "LinearAlgebra", "LogExpFunctions", "MappedArrays", "Random", "Reexport", "Requires", "Roots", "SparseArrays", "Statistics"]
+git-tree-sha1 = "a3704b8e5170f9339dff4e6cb286ad49464d3646"
+uuid = "76274a88-744f-5084-9051-94815aaf08c4"
+version = "0.10.6"
 
 [[deps.BitTwiddlingConvenienceFunctions]]
 deps = ["Static"]
@@ -318,6 +459,11 @@ git-tree-sha1 = "417b0ed7b8b838aa6ca0a87aadf1bb9eb111ce40"
 uuid = "5ae59095-9a9b-59fe-a467-6f913c188581"
 version = "0.12.8"
 
+[[deps.CommonSolve]]
+git-tree-sha1 = "9441451ee712d1aec22edad62db1a9af3dc8d852"
+uuid = "38540f10-b2f7-11e9-35d8-d573e4eb0ff2"
+version = "0.2.3"
+
 [[deps.CommonSubexpressions]]
 deps = ["MacroTools", "Test"]
 git-tree-sha1 = "7b8a93dba8af7e3b42fecabf646260105ac373f7"
@@ -334,11 +480,22 @@ version = "4.3.0"
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
 
+[[deps.ConcreteStructs]]
+git-tree-sha1 = "f749037478283d372048690eb3b5f92a79432b34"
+uuid = "2569d6c7-a4a2-43d3-a901-331e8e4be471"
+version = "0.2.3"
+
 [[deps.Conda]]
 deps = ["Downloads", "JSON", "VersionParsing"]
 git-tree-sha1 = "6e47d11ea2776bc5627421d59cdcc1296c058071"
 uuid = "8f4d0f93-b110-5947-807f-2305c1781a2d"
 version = "1.7.0"
+
+[[deps.ConstructionBase]]
+deps = ["LinearAlgebra"]
+git-tree-sha1 = "fb21ddd70a051d882a1686a5a550990bbe371a95"
+uuid = "187b0558-2788-49d3-abe0-74a17ed4e7c9"
+version = "1.4.1"
 
 [[deps.Contour]]
 git-tree-sha1 = "d05d9e7b7aedff4e5b51a029dced05cfb6125781"
@@ -472,6 +629,12 @@ git-tree-sha1 = "c6033cc3892d0ef5bb9cd29b7f2f0331ea5184ea"
 uuid = "f5851436-0d7a-5f13-b9de-f02708fd171a"
 version = "3.3.10+0"
 
+[[deps.FastGaussQuadrature]]
+deps = ["LinearAlgebra", "SpecialFunctions", "StaticArrays"]
+git-tree-sha1 = "58d83dd5a78a36205bdfddb82b1bb67682e64487"
+uuid = "442a2c76-b920-505d-bb47-c5924d526838"
+version = "0.4.9"
+
 [[deps.FilePathsBase]]
 deps = ["Compat", "Dates", "Mmap", "Printf", "Test", "UUIDs"]
 git-tree-sha1 = "e27c4ebe80e8699540f2d6c805cc12203b614f12"
@@ -528,6 +691,12 @@ deps = ["Test"]
 git-tree-sha1 = "04cb9cfaa6ba5311973994fe3496ddec19b6292a"
 uuid = "de31a74c-ac4f-5751-b3fd-e18cd04993ca"
 version = "0.5.0"
+
+[[deps.Functors]]
+deps = ["LinearAlgebra"]
+git-tree-sha1 = "a2657dd0f3e8a61dbe70fc7c122038bd33790af5"
+uuid = "d9f16b24-f501-4c13-a1f2-28368ffc5196"
+version = "0.3.0"
 
 [[deps.Future]]
 deps = ["Random"]
@@ -729,6 +898,12 @@ git-tree-sha1 = "9816b296736292a80b9a3200eb7fbb57aaa3917a"
 uuid = "5ab0869b-81aa-558d-bb23-cbf5423bbe9b"
 version = "0.6.5"
 
+[[deps.KeywordCalls]]
+deps = ["Compat", "Tricks"]
+git-tree-sha1 = "42feb5ec95dd43f99bb0437fcb5abccd14d9e67e"
+uuid = "4d827475-d3e4-43d6-abe3-9688362ede9f"
+version = "0.2.5"
+
 [[deps.Knockout]]
 deps = ["JSExpr", "JSON", "Observables", "Test", "WebIO"]
 git-tree-sha1 = "91835de56d816864f1c38fb5e3fad6eb1e741271"
@@ -888,6 +1063,11 @@ git-tree-sha1 = "bcaef4fc7a0cfe2cba636d84cda54b5e4e4ca3cd"
 uuid = "d125e4d3-2237-4719-b19c-fa641b8a4667"
 version = "0.1.8"
 
+[[deps.MappedArrays]]
+git-tree-sha1 = "e8b359ef06ec72e8c030463fe02efe5527ee5142"
+uuid = "dbb5928d-eab1-5f90-85c2-b9b0edb7c900"
+version = "0.4.1"
+
 [[deps.Markdown]]
 deps = ["Base64"]
 uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
@@ -982,6 +1162,12 @@ deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "51a08fb14ec28da2ec7a927c4337e4332c2a4720"
 uuid = "91d4177d-7536-5919-b921-800302f37372"
 version = "1.3.2+0"
+
+[[deps.Orbits]]
+deps = ["AstroLib", "ConcreteStructs", "KeywordCalls", "Printf", "RecipesBase", "Rotations", "StaticArrays", "Unitful", "UnitfulAstro"]
+git-tree-sha1 = "716c364edd604db0fbc497f9a8b93f8d700050af"
+uuid = "88f3d70c-3a4c-11ed-1389-4902f2e49de8"
+version = "0.1.0"
 
 [[deps.OrderedCollections]]
 git-tree-sha1 = "85f8e6578bf1f9ee0d11e7bb1b1456435479d47c"
@@ -1119,6 +1305,12 @@ git-tree-sha1 = "97aa253e65b784fd13e83774cadc95b38011d734"
 uuid = "1fd47b50-473d-5c70-9696-f719f8f3bcdc"
 version = "2.6.0"
 
+[[deps.Quaternions]]
+deps = ["LinearAlgebra", "Random"]
+git-tree-sha1 = "fcebf40de9a04c58da5073ec09c1c1e95944c79b"
+uuid = "94ee1d12-ae83-5a48-8b1c-48b8ff168ae0"
+version = "0.6.1"
+
 [[deps.Query]]
 deps = ["DataValues", "IterableTables", "MacroTools", "QueryOperators", "Statistics"]
 git-tree-sha1 = "a66aa7ca6f5c29f0e303ccef5c8bd55067df9bbe"
@@ -1192,6 +1384,18 @@ git-tree-sha1 = "68db32dff12bb6127bac73c209881191bf0efbb7"
 uuid = "f50d1b31-88e8-58de-be2c-1cc44531875f"
 version = "0.3.0+0"
 
+[[deps.Roots]]
+deps = ["ChainRulesCore", "CommonSolve", "Printf", "Setfield"]
+git-tree-sha1 = "a3db467ce768343235032a1ca0830fc64158dadf"
+uuid = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
+version = "2.0.8"
+
+[[deps.Rotations]]
+deps = ["LinearAlgebra", "Quaternions", "Random", "StaticArrays", "Statistics"]
+git-tree-sha1 = "793b6ef92f9e96167ddbbd2d9685009e200eb84f"
+uuid = "6038ab10-8711-5258-84ad-4b1120ba62dc"
+version = "1.3.3"
+
 [[deps.SHA]]
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 
@@ -1226,6 +1430,12 @@ version = "1.3.16"
 
 [[deps.Serialization]]
 uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
+
+[[deps.Setfield]]
+deps = ["ConstructionBase", "Future", "MacroTools", "StaticArraysCore"]
+git-tree-sha1 = "e2cc6d8c88613c05e1defb55170bf5ff211fbeac"
+uuid = "efcf1570-3423-57d1-acb7-fd33fddbac46"
+version = "1.1.1"
 
 [[deps.SharedArrays]]
 deps = ["Distributed", "Mmap", "Random", "Serialization"]
@@ -1375,6 +1585,12 @@ git-tree-sha1 = "8a75929dcd3c38611db2f8d08546decb514fcadf"
 uuid = "3bb67fe8-82b1-5028-8e26-92a6c54297fa"
 version = "0.9.9"
 
+[[deps.Transits]]
+deps = ["AstroLib", "Bijectors", "ChainRulesCore", "ConcreteStructs", "Distributions", "FastGaussQuadrature", "KeywordCalls", "LinearAlgebra", "Orbits", "Printf", "Random", "Rotations", "SpecialFunctions", "StaticArrays", "StatsFuns", "Unitful", "UnitfulAstro"]
+git-tree-sha1 = "dc763e71f8fa88993b1f202d2c87769d2aa5d5f9"
+uuid = "2e59a628-7bac-4d38-8059-3a73ba0928ab"
+version = "0.4.0"
+
 [[deps.Tricks]]
 git-tree-sha1 = "6bac775f2d42a611cdfcd1fb217ee719630c4175"
 uuid = "410a4b4d-49e4-4fbc-ab6d-cb71b17b3775"
@@ -1402,6 +1618,24 @@ deps = ["REPL"]
 git-tree-sha1 = "53915e50200959667e78a92a418594b428dffddf"
 uuid = "1cfade01-22cf-5700-b092-accc4b62d6e1"
 version = "0.4.1"
+
+[[deps.Unitful]]
+deps = ["ConstructionBase", "Dates", "LinearAlgebra", "Random"]
+git-tree-sha1 = "d57a4ed70b6f9ff1da6719f5f2713706d57e0d66"
+uuid = "1986cc42-f94f-5a68-af5c-568840ba703d"
+version = "1.12.0"
+
+[[deps.UnitfulAngles]]
+deps = ["Dates", "Unitful"]
+git-tree-sha1 = "d6cfdb6ddeb388af1aea38d2b9905fa014d92d98"
+uuid = "6fb2a4bd-7999-5318-a3b2-8ad61056cd98"
+version = "0.6.2"
+
+[[deps.UnitfulAstro]]
+deps = ["Unitful", "UnitfulAngles"]
+git-tree-sha1 = "05adf5e3a3bd1038dd50ff6760cddd42380a7260"
+uuid = "6112ee07-acf9-5e0f-b108-d242c714bf9f"
+version = "1.2.0"
 
 [[deps.Unzip]]
 git-tree-sha1 = "ca0969166a028236229f63514992fc073799bb78"
@@ -1677,20 +1911,41 @@ version = "1.4.1+0"
 """
 
 # ╔═╡ Cell order:
+# ╟─84119b52-a679-40e4-aa15-885770212020
 # ╠═3c432a5c-629e-11ed-35fc-8d6d0c7785ae
+# ╟─54d317cc-61f7-4b77-b6e1-b503fccea6c3
 # ╠═3d808e07-f98b-4ba8-8d8c-8f7052736c9f
+# ╠═da4af2f8-2388-4ac4-b681-bbc123d8a214
+# ╟─ca258594-ff04-4319-b91b-f7c44cdb5592
 # ╠═38775657-6468-46a1-acde-8259ccd705b7
+# ╠═6b1b523b-fd14-48be-aec8-49eb082fdd72
+# ╠═35cbed4c-cd70-4bd2-8db9-c4d5afc06d77
+# ╠═7146d1f9-3b62-4e79-9e2d-8351579f5fff
+# ╠═af5bb52a-63d0-4fcc-bc3d-cebbc368bf7b
+# ╟─d1d538ae-8734-468a-9665-dcd0c8d7e25f
 # ╠═40b35663-350f-4857-a0a7-2d6c433c7a0f
 # ╠═a5ff72e9-d932-465c-b5f0-017bbbeca52f
 # ╠═c4262261-b9b5-4c52-b4b9-867d27d8ef12
-# ╠═313e3b92-1bff-4ac1-9788-354994376d91
-# ╠═3f141677-8030-4b61-8840-77d38f30b156
+# ╟─e0cafdfc-0ce3-41d0-8c66-ccae734d6015
+# ╠═d44dd121-2b06-4bc2-b343-024f4edbf5b4
+# ╟─f4777597-477a-4bf0-b5d0-18f4da39bd1b
+# ╟─72fac2fc-914a-45df-9332-22a19e49f2bf
 # ╠═464f58e1-13e9-40f7-b5d2-679454422a73
 # ╠═b22e8c68-ccde-4b58-b55f-88a37bb15324
-# ╠═a4f4dfac-6f2c-4384-8a07-d84e2b926557
+# ╟─ef8894a0-b177-4f6a-b3ed-3f66d17ccd11
+# ╟─f0d1e7d2-1b05-4f2e-8505-3c57a15020f2
+# ╠═b9d7e082-7d25-412e-b9da-6444f71f9420
+# ╠═a33f011b-2eb1-4eb5-86f6-ff2883577fcb
+# ╟─b5fc39f3-e2e5-4cc2-a052-5074c267f609
+# ╠═820b321d-2c8a-48b9-a70f-bb2ef303908a
+# ╠═8b8091e6-119c-4f05-b6ad-809ca504c95f
+# ╠═4052a896-1a68-4084-91a5-9dd1b37792cf
+# ╠═32c9fda5-3746-4f74-bad6-db94026b4ab0
+# ╠═51ba32ea-ae3f-4e10-a1c4-61a24a5a9698
+# ╟─ef2cb094-156d-418e-b591-b479fc538138
+# ╠═bbb7e112-9e53-4549-a0e8-3b7141111ced
+# ╟─2d20ce14-61f3-45a4-bc30-02b596d90cf4
 # ╠═69c82d68-36c4-4505-b740-b06cd0bc1b6f
 # ╠═0a07809c-9c2e-4591-9fae-4821e487cbe8
-# ╠═bdcecf5a-75cc-4025-8716-3c4e58ee97e4
-# ╠═f19221f5-d843-4fdf-a4e9-4b14a5c11bfd
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
