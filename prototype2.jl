@@ -81,7 +81,7 @@ Next, we are defining the target number, author, and mission so we can extract T
 
 # ╔═╡ 40b35663-350f-4857-a0a7-2d6c433c7a0f
 begin 
-	target = "TIC231663901"  
+	target = "TIC149603524"  
 	author = "TESS"
 	mission = "TESS"
 end;
@@ -147,14 +147,27 @@ md"""
 Now we are going to try and fit the limb darkening model. I am having trouble plotting the data because SimpleOrbit is supposedly note defined. This is something we are going to have to work on.
 """
 
-# ╔═╡ b9d7e082-7d25-412e-b9da-6444f71f9420
+# ╔═╡ ede4e003-cbdf-4183-b225-565aeab02cae
+begin 
+	pars = BoxLeastSquares.params(results)
+	wrap = 0.5 * pars.period
+	phases = @. (mod(t - pars.t0 + wrap, pars.period) - wrap) / pars.period
+	inds = sortperm(phases)
+	model = BoxLeastSquares.model(results)
+	
+	scatter(phases[inds], y[inds], yerr=yerr[inds],
+	    label="data", xlabel="phase", xlim=(-0.2, 0.2), leg=:bottomright,markersize=2)
+	plot!(phases[inds], model[inds], lw=4, label="BLS model")
+end
+
+# ╔═╡ ab5539ad-67a9-422b-b67e-d210ef0ae4de
 begin
-	orbit = SimpleOrbit(period=2.56, duration=.6)
+	orbit = SimpleOrbit(period=4.41158, duration=.16)
 	u = [.4, 0.2] # quad limb dark
 	ld = PolynomialLimbDark(u)
-	t0 = range(-1,1, length=10) # days from t0
-	rs = range(.1,.2, length=2) # radius ratio
-	fluxes = @. ld(orbit, t, rs')
+	t0 = range(-2.6,2.6, length=100) # days from t0
+	rs = range(0,.4, length=2) # radius ratio
+	fluxes = @. ld(orbit, t0, rs')
 end
 
 # ╔═╡ 9c3a600b-5eef-45e1-a6f8-cc0fb3af3886
@@ -162,14 +175,14 @@ plot(fluxes)
 
 # ╔═╡ a33f011b-2eb1-4eb5-86f6-ff2883577fcb
 begin
-	ld2 = IntegratedLimbDark([0.4, 0.26])
-	orbit2 = SimpleOrbit(period=.32, duration=.16)
-	t2 = range(-1, 1, length=1000)
+	ld2 = IntegratedLimbDark([0.4, 0.2])
+	orbit2 = SimpleOrbit(period=4.41158, duration=.16)
+	t2 = range(-2.6,2.6, length=100)
 	texp = [0.1 0.2 0.3]
 	# no extra calculations made
-	flux = @. ld2(orbit, t, 0.2)
+	flux = @. ld2(orbit2, t2, 0.2)
 	# use quadrature to find time-averaged flux for each t
-	flux_int = @. ld2(orbit, t, 0.2, texp)
+	flux_int = @. ld2(orbit2, t2, 0.2, texp)
 end
 
 # ╔═╡ 4d482d6c-5a1e-495e-a493-9740d5204b50
@@ -177,15 +190,15 @@ plot(flux_int)
 
 # ╔═╡ 08f873a5-8511-42df-9079-e5dc058fa2fc
 begin
-	ld3 = SecondaryLimbDark([0.4, 0.26], brightness_ratio=0.1)
+	ld3 = SecondaryLimbDark([0.4, 0.2], brightness_ratio=0.1)
 	ld_int = IntegratedLimbDark(ld3) # composition works flawlessly
 	
-	orbit3 = SimpleOrbit(period=4, duration=1)
-	t3 = range(-1.25, 2.75, length=1000)
-	rs3 = range(0.01, 0.1, length=6)
+	orbit3 = SimpleOrbit(period=4.41158, duration=.16)
+	t3 = range(-2.6,2.6, length=100)
+	rs3 = range(0,.4, length=2)
 	
-	f = @. ld(orbit, t3, rs')
-	f_int = @. ld_int(orbit, t3, rs', texp=0.3)
+	f = @. ld(orbit3, t3, rs3')
+	f_int = @. ld_int(orbit3, t3, rs3', texp=0.3)
 end
 
 # ╔═╡ 63c4c230-72b2-426b-9141-bdff39ed2e49
@@ -1977,7 +1990,8 @@ version = "1.4.1+0"
 # ╠═b22e8c68-ccde-4b58-b55f-88a37bb15324
 # ╟─ef8894a0-b177-4f6a-b3ed-3f66d17ccd11
 # ╟─f0d1e7d2-1b05-4f2e-8505-3c57a15020f2
-# ╠═b9d7e082-7d25-412e-b9da-6444f71f9420
+# ╠═ede4e003-cbdf-4183-b225-565aeab02cae
+# ╠═ab5539ad-67a9-422b-b67e-d210ef0ae4de
 # ╠═9c3a600b-5eef-45e1-a6f8-cc0fb3af3886
 # ╠═a33f011b-2eb1-4eb5-86f6-ff2883577fcb
 # ╠═4d482d6c-5a1e-495e-a493-9740d5204b50
