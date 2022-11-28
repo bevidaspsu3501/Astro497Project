@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.11
+# v0.19.9
 
 using Markdown
 using InteractiveUtils
@@ -16,7 +16,7 @@ end
 
 # ╔═╡ 69c82d68-36c4-4505-b740-b06cd0bc1b6f
 begin 
-	using PlutoUI, PlutoTest, PlutoTeachingTools
+	using PlutoUI, PlutoTeachingTools, PlutoTest
 	using CSV, DataFrames, Query
 	using Downloads, HTTP
 	using StatsBase: mean, std
@@ -37,6 +37,11 @@ begin
 	using PyCall
 	lk = pyimport("lightkurve")
 end
+
+# ╔═╡ 53c9a03c-228a-4c10-8fa7-7c9593177ebc
+md"""
+# Reading in the Data
+"""
 
 # ╔═╡ 84119b52-a679-40e4-aa15-885770212020
 md"""
@@ -80,33 +85,55 @@ begin
 	df_ps_raw = CSV.read(filename_ps,DataFrame)
 end
 
-# ╔═╡ 72cdc7d6-55c6-4c27-922c-e49d1383d437
-tic = df_ps_raw."TIC ID"
-
-# ╔═╡ 4719c59b-e629-4407-b254-c48554e5ed18
-@bind sentence TextField(default="231663901")
-
-# ╔═╡ c86ce9df-4022-4ef3-93f0-444853262334
-poem1 = parse(Int,sentence)
-
-# ╔═╡ a217dbb9-fe50-4de0-85d2-0b07dfe900d8
-poem1 in Array(tic)
-
-# ╔═╡ 9b160e4d-7e07-4639-9686-71809d247b07
-begin
-	if poem1 in Array(tic)
-		poem2 = "TIC"*sentence
-	else
-		poem2 = 0
-		print("Not in set")
-	end
-end 
+# ╔═╡ 042b96c1-bb02-402e-b0c9-9a08e8d938e0
+md"""
+# Checking the Data Tables
+"""
 
 # ╔═╡ 6b1b523b-fd14-48be-aec8-49eb082fdd72
 describe(df_ps_raw)
 
+# ╔═╡ b46f956f-af08-4c04-bf7a-3021036e0c25
+md"""
+Number 0f columns:
+"""
+
 # ╔═╡ 35cbed4c-cd70-4bd2-8db9-c4d5afc06d77
 ncol(df_ps_raw)
+
+# ╔═╡ 218a5a2e-34e6-4458-9800-13a6d7ed69f1
+md"""
+# User selections
+"""
+
+# ╔═╡ 664622da-54e8-447c-a780-16a9bbceaf08
+md"""
+This step includes getting the tic numbers from the data set above and having the user select a specific tic number of their choosing for plotting.
+"""
+
+# ╔═╡ 72cdc7d6-55c6-4c27-922c-e49d1383d437
+tic = df_ps_raw."TIC ID"
+
+# ╔═╡ 4bbbb9b8-4bc3-45ff-acd0-11d8b5de16e0
+md"""
+Enter tic id number here:
+"""
+
+# ╔═╡ 4719c59b-e629-4407-b254-c48554e5ed18
+@bind sentence TextField(default="231663901")
+
+# ╔═╡ 9b160e4d-7e07-4639-9686-71809d247b07
+begin
+	poem1 = parse(Int,sentence)
+
+	
+	if poem1 in Array(tic)
+		poem2 = "TIC"*sentence
+	else
+		poem2 = "TIC"*231663901
+		print("Not in set")
+	end
+end 
 
 # ╔═╡ e28dc25e-0a1f-4dd4-9142-8526e3994397
 md"""
@@ -118,52 +145,29 @@ md"""
 Next, we are defining the target number, author, and mission so we can extract TESS light curve data. One of the next steps in this process will be to figure out how we can make it so the target is chosen by the user.
 """
 
-# ╔═╡ 40b35663-350f-4857-a0a7-2d6c433c7a0f
-begin 
+# ╔═╡ dd07eabf-c9eb-447f-9c38-721cd85e3cf5
+begin
 	target = poem2
 	author = "TESS"
 	mission = "TESS"
-end;
+	
+	search_result = lk.search_lightcurve(target,mission=mission)
+	lc = search_result.download()
+end
 
-# ╔═╡ dd07eabf-c9eb-447f-9c38-721cd85e3cf5
-search_result = lk.search_lightcurve(target,mission=mission)
+# ╔═╡ 7f75e7c6-0301-47a7-a2ab-d4bb2d58e5a7
+md"""
+# Plotting Data
+"""
 
-# ╔═╡ 227fa318-71ee-4601-9911-4a78be125c31
-typeof(search_result)
-
-# ╔═╡ 33e58a52-c75f-4ff4-a533-2b9d6355ff3a
-exposure_times = search_result.exptime
-
-# ╔═╡ 4b4beb50-f0e8-42b7-a99a-c2faa6f5b7f9
-typeof(exposure_times)
-
-# ╔═╡ 72f1f450-1216-463b-abb5-c653a3ab4741
-typeof(search_result.mission)
-
-# ╔═╡ 324a041c-4fb2-402d-a27f-c7693f447047
-search_result.mission[1]
-
-# ╔═╡ df5fcdd3-c8ca-46f2-a81a-cf80816181fe
-mission_strs = convert.(String,search_result.mission)
-
-# ╔═╡ 2aa1ec78-87fa-4cad-8dd2-3abe3b9b5f73
-sort(unique(mission_strs))
-
-# ╔═╡ 2491b074-0d58-4189-8b16-881cd663367e
-quar = unique(search_result.author)
-
-# ╔═╡ 5bd72ea5-2459-4590-a052-eb1ac2ed33f1
-exp = unique(search_result.exptime)
-
-# ╔═╡ 3617f0c1-f9fe-4bff-adc5-06cc27e4012c
-search_result_2 = lk.search_lightcurve(target, author=author, quarter=quar, exptime=exp)
-
-# ╔═╡ c4262261-b9b5-4c52-b4b9-867d27d8ef12
-lc = search_result_2.download()
+# ╔═╡ c21f98db-25c9-4dee-a4e8-a87d2bbb15f8
+md"""
+### Light Curves
+"""
 
 # ╔═╡ e0cafdfc-0ce3-41d0-8c66-ccae734d6015
 md"""
-Next we start to plot the data so we are able to see it and then fit a simple boxleastsquares model in order to predict parameters for our limb darkening model. We start by defining the 2 variables we are plotting and then selecting the errro in the flux for the paramaters later.
+The next 2 plots consist of a cleaned light curve and a flattened light curve
 """
 
 # ╔═╡ d44dd121-2b06-4bc2-b343-024f4edbf5b4
@@ -171,6 +175,22 @@ begin
 	t = lc.time.value
 	y = lc.flux.value
 	yerr = lc.flux_err.value
+
+	mask = (.!isnan.(y)) .&& (lc.quality .== 0)
+
+	t_clean = t[mask]
+	flux_clean = y[mask]
+	flux_err_clean = yerr[mask]
+	ylims_raw = quantile(flux_clean,[0,0.999])
+
+	#For Flattened Light Curve
+	
+	sv_width = 101 
+	sv_order = 2   
+	lc_smoothed = savitzky_golay(flux_clean, sv_width, sv_order)
+	lc_flat = flux_clean ./ lc_smoothed.y  
+	lc_err_flat = flux_err_clean ./ lc_smoothed.y
+	ylims_flat = quantile(lc_flat,[0,0.9995])
 end
 
 # ╔═╡ f4777597-477a-4bf0-b5d0-18f4da39bd1b
@@ -185,76 +205,89 @@ let
 			thickness_scaling=.6,  
 			)
 
-	title!(plt,"Plot of flux versus time")
-	xlabel!(plt,"time")
-	ylabel!(plt,"flux")
+	title!(plt,"Light Curve")
+	xlabel!(plt,"Time")
+	ylabel!(plt,"Flux")
 	
-	scatter!(plt, t,y, markercolor=28, markersize=.1, markershape=:circle, markerstrokewidth=2, markeralpha=1.0)
+	scatter!(plt, t_clean,flux_clean, ylims=ylims_raw, markercolor=28, markersize=.1, markershape=:circle, markerstrokewidth=2, markeralpha=1.0)
 	
 	savefig(plt, "fig1.pdf")
 	plt
 end
 
-# ╔═╡ 6f9d2fe8-8a73-4d7c-829c-a487965a7e45
-mask = (.!isnan.(y)) .&& (lc.quality .== 0)
-
-# ╔═╡ 67365154-ae71-4fdd-9eb4-eac5ec8e1788
-begin 
-	t_clean = t[mask]
-	flux_clean = y[mask]
-	flux_err_clean = yerr[mask]
-end;
-
-# ╔═╡ f8f021d7-6300-4339-9de2-cd6e7e8c97b9
-ylims_raw = quantile(flux_clean,[0,0.999])
-
-# ╔═╡ 15f9084e-e7e7-4ec7-89d1-718d32b973c2
-scatter(t_clean,flux_clean, ylims=ylims_raw, markersize=0.2,label=:none)
-
-# ╔═╡ 3f90cf5d-0b88-4b35-94b6-d334ee3cb509
-begin
-	sv_width = 101 # number of points to use
-	sv_order = 2   # order of polynomial to use 
-	lc_smoothed = savitzky_golay(flux_clean, sv_width, sv_order)
-	lc_flat = flux_clean ./ lc_smoothed.y  # smoothed light curve stored in y
-	lc_err_flat = flux_err_clean ./ lc_smoothed.y  # remember to scale errors to match
-end;
-
 # ╔═╡ e284ebf0-6781-49ac-85a6-e23c7970ca9e
 let 
-	ylims_flat = quantile(lc_flat,[0,0.9995])
-	plt = scatter(t_clean,lc_flat, ylims=ylims_flat, markersize=0.5,label=:none)
+	scalefontsizes()    
+	scalefontsizes(2) 
+	my_font = "Computer Modern"
+	my_palette = ColorSchemes.:jet1 
+
+	plt = plot(legend=:none, size=(1000,700), widen=false, 
+			fontfamily=my_font,  
+			thickness_scaling=.6,  
+			)
+
+	title!(plt,"Flattened Light Curve")
+	xlabel!(plt,"Time")
+	ylabel!(plt,"Flux")
+	
+	scatter!(plt, t_clean,lc_flat, ylims=ylims_flat, markercolor=28, markersize=.1, markershape=:circle, markerstrokewidth=2, markeralpha=1.0)
+	
+	savefig(plt, "fig2.pdf")
+	plt
 end
 
 # ╔═╡ 9dcf9566-e361-459e-a477-c2897379426b
 md"""
-# Periodogram
+### Periodogram
 """
 
 # ╔═╡ 72fac2fc-914a-45df-9332-22a19e49f2bf
 md"""
-Here we use the BoxLeastSquares function in order to find the paramater.
+Next, we use the BoxLeastSquares function in order to extract the data needed for a periodogram
 """
 
-# ╔═╡ 464f58e1-13e9-40f7-b5d2-679454422a73
-results = BLS(t,y,yerr,duration=.16)
-
-# ╔═╡ b22e8c68-ccde-4b58-b55f-88a37bb15324
+# ╔═╡ ed297cfb-e34d-4f9e-a6b7-aaf4115ced78
 begin
 	durations_to_search = [0.05, 0.10, 0.15, 0.20, 0.25, 0.33]
 	bls_result = BLS(t_clean, lc_flat, lc_err_flat; duration = durations_to_search )
+
+	PP = bls_result.periods
+	PW = bls_result.power
 end
 
 # ╔═╡ bd8bc954-e9e2-4eee-bb50-70ba1cafbc91
-plot(bls_result.periods,bls_result.power, xlabel="Period (d)", ylabel="BLS Power", label=:none, title=target, xscale=:log10)
+let 
+	scalefontsizes()    
+	scalefontsizes(2) 
+	my_font = "Computer Modern"
+	my_palette = ColorSchemes.:jet1 
 
-# ╔═╡ a1b38368-e9df-4e38-8878-8581eb796fd1
+	plt = plot(legend=:none, size=(1200,700), widen=false, 
+			fontfamily=my_font,  
+			thickness_scaling=.6,  
+			)
+	
+	plot(plt, PP,PW, xlabel="Period (d)", ylabel="BLS Power", label=:none, title=target, xscale=:log10)
+end
+
+# ╔═╡ f7f904fb-b2cd-4531-a35f-2d36366196ea
 begin
 	bls_param = BoxLeastSquares.params(bls_result)
 	P = bls_param.period
 	D = bls_param.duration
 	tp = bls_param.t0
 end
+
+# ╔═╡ 7baa135c-e77c-4b7c-991c-e400c9fa45c8
+md"""
+### Fitted Models
+"""
+
+# ╔═╡ ea92580f-658f-4838-a2c3-5bccb328ad82
+md"""
+Below is a fitted model to the data using BoxLeastSquares. This simple model fits a box to the flattened data
+"""
 
 # ╔═╡ a8fd8281-20a9-44ea-bc4c-bc01d5de831a
 begin 
@@ -267,25 +300,26 @@ begin
 
 	
 	scatter!(plt_folded1, phases1[inds1], lc_flat[inds1], yerr=lc_err_flat[inds1],
-    markersize=0, markerstrokewidth=0, label="Flattend Data")
+    markersize=0, markerstrokewidth=0, label="Flattened Data")
 	plot!(plt_folded1, phases1[inds1], bls_model[inds1], lw=3, label="BLS Model")
 end
+
+# ╔═╡ 7d1f97f2-20e8-440c-89b7-5fcb0f6276f0
+md"""
+Next is an approximation of the period and the flattened data graphed to the guessed period.
+"""
 
 # ╔═╡ 1d1db980-d16d-4816-b034-fa41b9e094c7
 begin 
 	lc_wo_nans = lc.remove_nans()
 	lc_wo_outliers = lc_wo_nans.remove_outliers()
 	lc_flat2 = lc_wo_outliers.flatten()
- end
 
-# ╔═╡ 28ebcad5-4d5d-49b7-9905-2eecc64923a2
-begin
 	bls_periodogram = lc_flat2.to_periodogram("bls")
 	bls_periodogram.period_at_max_power
-end
 
-# ╔═╡ c9a17b88-4022-4978-961d-a31f55349e5a
-period_guess = first(bls_periodogram.period_at_max_power)
+	period_guess = first(bls_periodogram.period_at_max_power)
+ end
 
 # ╔═╡ edb4c7e4-32a3-499c-b78d-27dd0e1e9dda
 begin
@@ -294,20 +328,28 @@ begin
 	phases2 = @. (mod(t_clean - lk_t0 + wrap2, period_guess) - wrap2) / period_guess
 	inds2 = sortperm(phases2)
 	
-	plt_folded2 = plot(xlabel="Phase", ylabel="Flux", xlims=(-0.2, 0.2), legend=:bottomright)
+	plt_folded2 = plot(xlabel="Phase", ylabel="Flux", xlims=(-.5, .5), legend=:bottomright)
 	scatter!(plt_folded2, phases2[inds2], lc_flat[inds2], yerr=lc_err_flat[inds2],
-    markersize=1.5, markerstrokewidth=0, label="Flattend Data")
+    markersize=0, markerstrokewidth=0, label="Flattened Data")
 	
 end
 
-# ╔═╡ ef8894a0-b177-4f6a-b3ed-3f66d17ccd11
+# ╔═╡ 733e276d-0de5-41fd-ae1d-080b2f14c19c
 md"""
-For this first model, we are able to define the period and duration of the orbit and use this for the limb darkening data.
+In order to see if our period guess is good enough, there should be a very small difference between it and the actual period. This value is below:
 """
 
-# ╔═╡ f0d1e7d2-1b05-4f2e-8505-3c57a15020f2
+# ╔═╡ e9211016-9383-45e7-a615-03b069fa4b52
+ bls_param.period-period_guess
+
+# ╔═╡ cf994c7e-2f3b-45eb-8214-2c6a67adf47b
 md"""
-Now we are going to try and fit the limb darkening model. I am having trouble plotting the data because SimpleOrbit is supposedly note defined. This is something we are going to have to work on.
+### Limb Darkening
+"""
+
+# ╔═╡ ef8894a0-b177-4f6a-b3ed-3f66d17ccd11
+md"""
+For this first model, we are able to define the period and duration of the orbit and use this for the limb darkening data. 
 """
 
 # ╔═╡ ab5539ad-67a9-422b-b67e-d210ef0ae4de
@@ -315,44 +357,29 @@ begin
 	orbit = SimpleOrbit(period=P, duration=D)
 	u = [.4,.26] 
 	ld = PolynomialLimbDark(u)
-	t0 = range(-tp,tp,length=1000) # days from t0
+	t0 = range(-D,D,length=1000) # days from t0
 	rs = range(0,.2, length=10) # radius ratio
 	fluxes = @. ld(orbit, t0, rs')
+
+	plot(t0,fluxes)
 end
 
-# ╔═╡ 9c3a600b-5eef-45e1-a6f8-cc0fb3af3886
-plot(t0,fluxes)
+# ╔═╡ 40642efe-98a3-4756-bd0d-ceab881f3136
+md"""
+Next we are fitting the integrated limb darkening model
+"""
 
 # ╔═╡ a33f011b-2eb1-4eb5-86f6-ff2883577fcb
 begin
 	ld2 = IntegratedLimbDark([0.4, 0.2])
-	orbit2 = SimpleOrbit(period=4.41158, duration=.16)
-	t2 = range(-2.6,2.6, length=100)
-	texp = [0.1 0.2 0.3]
-	# no extra calculations made
-	flux = @. ld2(orbit2, t2, 0.2)
+	orbit2 = SimpleOrbit(period=P, duration=D)
+	t2 = range(-D,D, length=100)
+	texp = [0.05 0.15 0.33]
 	# use quadrature to find time-averaged flux for each t
 	flux_int = @. ld2(orbit2, t2, 0.2, texp)
+
+	plot(flux_int)
 end
-
-# ╔═╡ 4d482d6c-5a1e-495e-a493-9740d5204b50
-plot(flux_int)
-
-# ╔═╡ 08f873a5-8511-42df-9079-e5dc058fa2fc
-begin
-	ld3 = SecondaryLimbDark([0.4, 0.2], brightness_ratio=0.1)
-	ld_int = IntegratedLimbDark(ld3) # composition works flawlessly
-	
-	orbit3 = SimpleOrbit(period=4.41158, duration=.16)
-	t3 = range(-2.6,2.6, length=100)
-	rs3 = range(0,.4, length=2)
-	
-	f = @. ld(orbit3, t3, rs3')
-	f_int = @. ld_int(orbit3, t3, rs3', texp=0.3)
-end
-
-# ╔═╡ 63c4c230-72b2-426b-9141-bdff39ed2e49
-plot(f)
 
 # ╔═╡ b5fc39f3-e2e5-4cc2-a052-5074c267f609
 md"""
@@ -2202,65 +2229,53 @@ version = "1.4.1+0"
 """
 
 # ╔═╡ Cell order:
+# ╟─53c9a03c-228a-4c10-8fa7-7c9593177ebc
 # ╟─84119b52-a679-40e4-aa15-885770212020
-# ╠═3c432a5c-629e-11ed-35fc-8d6d0c7785ae
+# ╟─3c432a5c-629e-11ed-35fc-8d6d0c7785ae
 # ╟─54d317cc-61f7-4b77-b6e1-b503fccea6c3
-# ╠═3d808e07-f98b-4ba8-8d8c-8f7052736c9f
-# ╠═da4af2f8-2388-4ac4-b681-bbc123d8a214
+# ╟─3d808e07-f98b-4ba8-8d8c-8f7052736c9f
+# ╟─da4af2f8-2388-4ac4-b681-bbc123d8a214
 # ╟─ca258594-ff04-4319-b91b-f7c44cdb5592
-# ╠═38775657-6468-46a1-acde-8259ccd705b7
-# ╠═72cdc7d6-55c6-4c27-922c-e49d1383d437
-# ╠═4719c59b-e629-4407-b254-c48554e5ed18
-# ╠═c86ce9df-4022-4ef3-93f0-444853262334
-# ╠═a217dbb9-fe50-4de0-85d2-0b07dfe900d8
-# ╠═9b160e4d-7e07-4639-9686-71809d247b07
-# ╠═6b1b523b-fd14-48be-aec8-49eb082fdd72
-# ╠═35cbed4c-cd70-4bd2-8db9-c4d5afc06d77
-# ╠═7146d1f9-3b62-4e79-9e2d-8351579f5fff
-# ╠═af5bb52a-63d0-4fcc-bc3d-cebbc368bf7b
+# ╟─38775657-6468-46a1-acde-8259ccd705b7
+# ╟─042b96c1-bb02-402e-b0c9-9a08e8d938e0
+# ╟─6b1b523b-fd14-48be-aec8-49eb082fdd72
+# ╟─b46f956f-af08-4c04-bf7a-3021036e0c25
+# ╟─35cbed4c-cd70-4bd2-8db9-c4d5afc06d77
+# ╟─7146d1f9-3b62-4e79-9e2d-8351579f5fff
+# ╟─af5bb52a-63d0-4fcc-bc3d-cebbc368bf7b
+# ╟─218a5a2e-34e6-4458-9800-13a6d7ed69f1
+# ╟─664622da-54e8-447c-a780-16a9bbceaf08
+# ╟─72cdc7d6-55c6-4c27-922c-e49d1383d437
+# ╟─4bbbb9b8-4bc3-45ff-acd0-11d8b5de16e0
+# ╟─4719c59b-e629-4407-b254-c48554e5ed18
+# ╟─9b160e4d-7e07-4639-9686-71809d247b07
 # ╟─e28dc25e-0a1f-4dd4-9142-8526e3994397
 # ╟─d1d538ae-8734-468a-9665-dcd0c8d7e25f
-# ╠═40b35663-350f-4857-a0a7-2d6c433c7a0f
-# ╠═dd07eabf-c9eb-447f-9c38-721cd85e3cf5
-# ╠═227fa318-71ee-4601-9911-4a78be125c31
-# ╠═33e58a52-c75f-4ff4-a533-2b9d6355ff3a
-# ╠═4b4beb50-f0e8-42b7-a99a-c2faa6f5b7f9
-# ╠═72f1f450-1216-463b-abb5-c653a3ab4741
-# ╠═324a041c-4fb2-402d-a27f-c7693f447047
-# ╠═df5fcdd3-c8ca-46f2-a81a-cf80816181fe
-# ╠═2aa1ec78-87fa-4cad-8dd2-3abe3b9b5f73
-# ╠═2491b074-0d58-4189-8b16-881cd663367e
-# ╠═5bd72ea5-2459-4590-a052-eb1ac2ed33f1
-# ╠═3617f0c1-f9fe-4bff-adc5-06cc27e4012c
-# ╠═c4262261-b9b5-4c52-b4b9-867d27d8ef12
+# ╟─dd07eabf-c9eb-447f-9c38-721cd85e3cf5
+# ╟─7f75e7c6-0301-47a7-a2ab-d4bb2d58e5a7
+# ╟─c21f98db-25c9-4dee-a4e8-a87d2bbb15f8
 # ╟─e0cafdfc-0ce3-41d0-8c66-ccae734d6015
-# ╠═d44dd121-2b06-4bc2-b343-024f4edbf5b4
-# ╠═f4777597-477a-4bf0-b5d0-18f4da39bd1b
-# ╠═6f9d2fe8-8a73-4d7c-829c-a487965a7e45
-# ╠═67365154-ae71-4fdd-9eb4-eac5ec8e1788
-# ╠═f8f021d7-6300-4339-9de2-cd6e7e8c97b9
-# ╠═15f9084e-e7e7-4ec7-89d1-718d32b973c2
-# ╠═3f90cf5d-0b88-4b35-94b6-d334ee3cb509
-# ╠═e284ebf0-6781-49ac-85a6-e23c7970ca9e
+# ╟─d44dd121-2b06-4bc2-b343-024f4edbf5b4
+# ╟─f4777597-477a-4bf0-b5d0-18f4da39bd1b
+# ╟─e284ebf0-6781-49ac-85a6-e23c7970ca9e
 # ╟─9dcf9566-e361-459e-a477-c2897379426b
 # ╟─72fac2fc-914a-45df-9332-22a19e49f2bf
-# ╠═464f58e1-13e9-40f7-b5d2-679454422a73
-# ╠═b22e8c68-ccde-4b58-b55f-88a37bb15324
-# ╠═bd8bc954-e9e2-4eee-bb50-70ba1cafbc91
-# ╠═a1b38368-e9df-4e38-8878-8581eb796fd1
-# ╠═a8fd8281-20a9-44ea-bc4c-bc01d5de831a
-# ╠═1d1db980-d16d-4816-b034-fa41b9e094c7
-# ╠═28ebcad5-4d5d-49b7-9905-2eecc64923a2
-# ╠═c9a17b88-4022-4978-961d-a31f55349e5a
-# ╠═edb4c7e4-32a3-499c-b78d-27dd0e1e9dda
+# ╠═ed297cfb-e34d-4f9e-a6b7-aaf4115ced78
+# ╟─bd8bc954-e9e2-4eee-bb50-70ba1cafbc91
+# ╟─f7f904fb-b2cd-4531-a35f-2d36366196ea
+# ╟─7baa135c-e77c-4b7c-991c-e400c9fa45c8
+# ╟─ea92580f-658f-4838-a2c3-5bccb328ad82
+# ╟─a8fd8281-20a9-44ea-bc4c-bc01d5de831a
+# ╟─7d1f97f2-20e8-440c-89b7-5fcb0f6276f0
+# ╟─1d1db980-d16d-4816-b034-fa41b9e094c7
+# ╟─edb4c7e4-32a3-499c-b78d-27dd0e1e9dda
+# ╟─733e276d-0de5-41fd-ae1d-080b2f14c19c
+# ╟─e9211016-9383-45e7-a615-03b069fa4b52
+# ╟─cf994c7e-2f3b-45eb-8214-2c6a67adf47b
 # ╟─ef8894a0-b177-4f6a-b3ed-3f66d17ccd11
-# ╟─f0d1e7d2-1b05-4f2e-8505-3c57a15020f2
-# ╠═ab5539ad-67a9-422b-b67e-d210ef0ae4de
-# ╠═9c3a600b-5eef-45e1-a6f8-cc0fb3af3886
-# ╠═a33f011b-2eb1-4eb5-86f6-ff2883577fcb
-# ╠═4d482d6c-5a1e-495e-a493-9740d5204b50
-# ╠═08f873a5-8511-42df-9079-e5dc058fa2fc
-# ╠═63c4c230-72b2-426b-9141-bdff39ed2e49
+# ╟─ab5539ad-67a9-422b-b67e-d210ef0ae4de
+# ╟─40642efe-98a3-4756-bd0d-ceab881f3136
+# ╟─a33f011b-2eb1-4eb5-86f6-ff2883577fcb
 # ╟─b5fc39f3-e2e5-4cc2-a052-5074c267f609
 # ╠═8b8091e6-119c-4f05-b6ad-809ca504c95f
 # ╠═4052a896-1a68-4084-91a5-9dd1b37792cf
