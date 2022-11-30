@@ -49,16 +49,10 @@ md"""
 ### User selections
 """
 
-# ╔═╡ 4bbbb9b8-4bc3-45ff-acd0-11d8b5de16e0
-md"""
-Enter tic id number here:
-"""
-
 # ╔═╡ 2b8bfdbf-1ba7-4d7e-8499-66dfe213d30d
-@bind sentence confirm(TextField(default="231663901"))
-
-# ╔═╡ 8b398219-d7a5-4136-9565-cf8c3a7b7ba3
-@bind vegetable PlutoUI.Select()
+md"""
+TIC Number (just the number): $(@bind sentence TextField(default= "231663901"))
+"""
 
 # ╔═╡ 7f75e7c6-0301-47a7-a2ab-d4bb2d58e5a7
 md"""
@@ -152,12 +146,13 @@ begin
 	df_ps_raw0 = CSV.read(filename_ps,DataFrame)
 	df_ps_raw1 = filter(row -> !ismissing(row."Planet Radius (R_Earth)"),df_ps_raw0)
 	df_ps_raw = filter(row -> !ismissing(row."Stellar Radius (R_Sun)"),df_ps_raw1)
-end
+end ;
 
 # ╔═╡ 72cdc7d6-55c6-4c27-922c-e49d1383d437
 tic = df_ps_raw."TIC ID"
 
 # ╔═╡ 9b160e4d-7e07-4639-9686-71809d247b07
+# ╠═╡ show_logs = false
 begin
 	if sentence == ""
 		sentence1 = "231663901"
@@ -172,28 +167,10 @@ begin
 		poem2 = "TIC"*sentence1
 	else
 		poem2 = "TIC"*"231663901"
-		print("Not in set")
 	end
-end
+end ;
 
-# ╔═╡ 72cb8c0b-d44a-43c8-a029-b373ab9ab139
-begin
-	filt = filter(row -> row."TIC ID" == poem1, df_ps_raw)
-	PR = filt."Planet Radius (R_Earth)"[1]
-	SR = filt."Stellar Radius (R_Sun)"[1]
-	Rs = PR/(SR*109.076)
-end 
-
-# ╔═╡ 9a834fa6-dbd3-4df3-b15c-7c57746fb28a
-filt
-
-# ╔═╡ 6b1b523b-fd14-48be-aec8-49eb082fdd72
-describe(df_ps_raw) ;
-
-# ╔═╡ 35cbed4c-cd70-4bd2-8db9-c4d5afc06d77
-ncol(df_ps_raw) ;
-
-# ╔═╡ dd07eabf-c9eb-447f-9c38-721cd85e3cf5
+# ╔═╡ 487ecdd6-1e3a-4b70-bc6d-bf574b8ba9e7
 # ╠═╡ show_logs = false
 begin
 	target = poem2
@@ -201,9 +178,24 @@ begin
 	mission = "TESS"
 
 	search_result = lk.search_lightcurve(target,mission=mission)
-	lc = search_result.download()
-	
-end;
+	lc1 = search_result.download()
+
+	if typeof(lc1) == PyObject
+		lc = search_result.download()
+		if target != "TIC"*sentence
+			warning_box(md"""
+			TIC not found in set, give a TIC number from the list above. Default plots use the first TIC number.""")
+		elseif target == "TIC"*sentence
+			correct(md"""
+			Check down below for the plots of your TIC number
+			""")
+		end
+	elseif typeof(lc1) == Nothing
+		search_result1 = lk.search_lightcurve("TIC231663901",mission=mission)
+		lc = search_result1.download()
+		warning_box(md"""TIC not found in lightcurve package, please try another one from the list above. Default plot is the first TIC number.""")	
+	end
+end
 
 # ╔═╡ 1d1db980-d16d-4816-b034-fa41b9e094c7
 begin 
@@ -216,6 +208,20 @@ begin
 
 	period_guess = first(bls_periodogram.period_at_max_power)
  end
+
+# ╔═╡ 72cb8c0b-d44a-43c8-a029-b373ab9ab139
+begin
+	filt = filter(row -> row."TIC ID" == poem1, df_ps_raw)
+	PR = filt."Planet Radius (R_Earth)"[1]
+	SR = filt."Stellar Radius (R_Sun)"[1]
+	Rs = PR/(SR*109.076)
+end ;
+
+# ╔═╡ 6b1b523b-fd14-48be-aec8-49eb082fdd72
+describe(df_ps_raw) ;
+
+# ╔═╡ 35cbed4c-cd70-4bd2-8db9-c4d5afc06d77
+ncol(df_ps_raw) ;
 
 # ╔═╡ d44dd121-2b06-4bc2-b343-024f4edbf5b4
 begin
@@ -2125,10 +2131,9 @@ version = "1.4.1+0"
 # ╟─53c9a03c-228a-4c10-8fa7-7c9593177ebc
 # ╟─218a5a2e-34e6-4458-9800-13a6d7ed69f1
 # ╟─72cdc7d6-55c6-4c27-922c-e49d1383d437
-# ╟─4bbbb9b8-4bc3-45ff-acd0-11d8b5de16e0
-# ╠═2b8bfdbf-1ba7-4d7e-8499-66dfe213d30d
-# ╠═8b398219-d7a5-4136-9565-cf8c3a7b7ba3
-# ╠═9b160e4d-7e07-4639-9686-71809d247b07
+# ╟─2b8bfdbf-1ba7-4d7e-8499-66dfe213d30d
+# ╟─9b160e4d-7e07-4639-9686-71809d247b07
+# ╟─487ecdd6-1e3a-4b70-bc6d-bf574b8ba9e7
 # ╟─7f75e7c6-0301-47a7-a2ab-d4bb2d58e5a7
 # ╟─f4777597-477a-4bf0-b5d0-18f4da39bd1b
 # ╟─e284ebf0-6781-49ac-85a6-e23c7970ca9e
@@ -2142,8 +2147,8 @@ version = "1.4.1+0"
 # ╟─7d6cfaff-914d-472b-94fb-cc7b9ba2665e
 # ╟─e9211016-9383-45e7-a615-03b069fa4b52
 # ╟─cf994c7e-2f3b-45eb-8214-2c6a67adf47b
-# ╠═ab5539ad-67a9-422b-b67e-d210ef0ae4de
-# ╠═a33f011b-2eb1-4eb5-86f6-ff2883577fcb
+# ╟─ab5539ad-67a9-422b-b67e-d210ef0ae4de
+# ╟─a33f011b-2eb1-4eb5-86f6-ff2883577fcb
 # ╟─b5fc39f3-e2e5-4cc2-a052-5074c267f609
 # ╟─8b8091e6-119c-4f05-b6ad-809ca504c95f
 # ╟─4052a896-1a68-4084-91a5-9dd1b37792cf
@@ -2152,16 +2157,14 @@ version = "1.4.1+0"
 # ╟─ef2cb094-156d-418e-b591-b479fc538138
 # ╟─bbb7e112-9e53-4549-a0e8-3b7141111ced
 # ╟─2d20ce14-61f3-45a4-bc30-02b596d90cf4
-# ╠═69c82d68-36c4-4505-b740-b06cd0bc1b6f
-# ╠═0a07809c-9c2e-4591-9fae-4821e487cbe8
+# ╟─69c82d68-36c4-4505-b740-b06cd0bc1b6f
+# ╟─0a07809c-9c2e-4591-9fae-4821e487cbe8
 # ╟─3c432a5c-629e-11ed-35fc-8d6d0c7785ae
 # ╟─3d808e07-f98b-4ba8-8d8c-8f7052736c9f
-# ╠═38775657-6468-46a1-acde-8259ccd705b7
-# ╠═72cb8c0b-d44a-43c8-a029-b373ab9ab139
-# ╠═9a834fa6-dbd3-4df3-b15c-7c57746fb28a
+# ╟─38775657-6468-46a1-acde-8259ccd705b7
+# ╟─72cb8c0b-d44a-43c8-a029-b373ab9ab139
 # ╟─6b1b523b-fd14-48be-aec8-49eb082fdd72
 # ╟─35cbed4c-cd70-4bd2-8db9-c4d5afc06d77
-# ╠═dd07eabf-c9eb-447f-9c38-721cd85e3cf5
 # ╟─d44dd121-2b06-4bc2-b343-024f4edbf5b4
 # ╟─ed297cfb-e34d-4f9e-a6b7-aaf4115ced78
 # ╟─f7f904fb-b2cd-4531-a35f-2d36366196ea
