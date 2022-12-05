@@ -253,37 +253,37 @@ begin
 end ;
 
 # ╔═╡ f4777597-477a-4bf0-b5d0-18f4da39bd1b
-let  
-	scalefontsizes()    
-	scalefontsizes(2) 
+let   
+	scalefontsizes()
+	scalefontsizes(1) 
 	my_font = "Computer Modern"
 	my_palette = ColorSchemes.:jet1 
 
 	plt = plot(legend=:none, size=(700,400), widen=false, 
 			fontfamily=my_font,  
-			thickness_scaling=.6,  
+			thickness_scaling=1.15
 			)
 
 	title!(plt,"Light Curve")
 	xlabel!(plt,"Time")
 	ylabel!(plt,"Flux")
 	
-	scatter!(plt, t_clean,flux_clean, ylims=ylims_raw, markercolor=28, markersize=.1, markershape=:circle, markerstrokewidth=2, markeralpha=1.0)
+	plt1 = scatter!(plt, t_clean,flux_clean, ylims=ylims_raw, markercolor=28, markersize=.1, markershape=:circle, markerstrokewidth=2, markeralpha=1.0)
 	
-	savefig(plt, "fig1.pdf")
-	plt
+	savefig(plt1, "fig1.pdf")
+	plt1
 end
 
 # ╔═╡ e284ebf0-6781-49ac-85a6-e23c7970ca9e
-let 
-	scalefontsizes()    
-	scalefontsizes(2) 
+let    
+	scalefontsizes()
+	scalefontsizes(1) 
 	my_font = "Computer Modern"
 	my_palette = ColorSchemes.:jet1 
 
 	plt = plot(legend=:none, size=(700,400), widen=false, 
 			fontfamily=my_font,  
-			thickness_scaling=.6,  
+			thickness_scaling=1.15,  
 			)
 
 	title!(plt,"Flattened Light Curve")
@@ -298,6 +298,9 @@ end
 
 # ╔═╡ edb4c7e4-32a3-499c-b78d-27dd0e1e9dda
 begin
+	scalefontsizes()
+	scalefontsizes(1)
+	
 	wrap2 = 0.5 * period_guess
 	lk_t0 = 0.0
 	phases2 = @. (mod(t_clean - lk_t0 + wrap2, period_guess) - wrap2) / period_guess
@@ -319,16 +322,15 @@ begin
 end ;
 
 # ╔═╡ bd8bc954-e9e2-4eee-bb50-70ba1cafbc91
-let 
-	scalefontsizes()    
-	scalefontsizes(2) 
+let  
+	scalefontsizes()
+	scalefontsizes(1.5) 
 	my_font = "Computer Modern"
 	my_palette = ColorSchemes.:jet1 
 
-	plt = plot(legend=:none, size=(1200,700), widen=false, 
+	plt = plot(legend=:none, size=(1300,800), widen=false, 
 			fontfamily=my_font,  
-			thickness_scaling=.6,  
-			)
+			thickness_scaling=1.3)
 	
 	plot(plt, PP,PW, xlabel="Period (d)", ylabel="BLS Power", label=:none, title=target, xscale=:log10)
 end
@@ -343,6 +345,9 @@ end ;
 
 # ╔═╡ a8fd8281-20a9-44ea-bc4c-bc01d5de831a
 begin 
+	scalefontsizes()
+	scalefontsizes(1)
+	
 	plt_folded1 = plot(xlabel="Phase", ylabel="Flux", xlims=(-.5, .5), legend=:topright)
 	
 	wrap1 = 0.5 * P
@@ -356,11 +361,20 @@ begin
 	plot!(plt_folded1, phases1[inds1], bls_model[inds1], lw=3, label="BLS Model")
 end
 
+# ╔═╡ 4a39a2ce-ed40-4bcf-8099-87a5d9ca8c21
+bls_param.period
+
+# ╔═╡ 2bde00c6-c392-4b59-ae56-71636cbd8131
+bls_param.period/period_guess
+
 # ╔═╡ e9211016-9383-45e7-a615-03b069fa4b52
- bls_param.period-period_guess
+ abs((period_guess-bls_param.period)/bls_param.period)
 
 # ╔═╡ ab5539ad-67a9-422b-b67e-d210ef0ae4de
 begin
+	scalefontsizes()
+	scalefontsizes(1)
+	
 	orbit = SimpleOrbit(period=P, duration=D)
 	u = [.2,.8] 
 	ld = PolynomialLimbDark(u)
@@ -368,11 +382,14 @@ begin
 	rs = range(0,Rs, length=10) # radius ratio
 	fluxes = @. ld(orbit, t0, rs')
 
-	plot(t0,fluxes)
+	plot(t0,fluxes,ylabel="Flux",xlabel="Duration")
 end
 
 # ╔═╡ a33f011b-2eb1-4eb5-86f6-ff2883577fcb
 begin
+	scalefontsizes()
+	scalefontsizes(1)
+	
 	ld2 = IntegratedLimbDark([0.2, 0.8])
 	orbit2 = SimpleOrbit(period=P, duration=D)
 	t2 = range(-D,D, length=100)
@@ -380,7 +397,7 @@ begin
 	# use quadrature to find time-averaged flux for each t
 	flux_int = @. ld2(orbit2, t2, 0.2, texp)
 
-	plot(t2,flux_int)
+	plot(t2,flux_int,ylabel="Flux",xlabel="Duration")
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -2142,10 +2159,12 @@ version = "1.4.1+0"
 # ╟─7baa135c-e77c-4b7c-991c-e400c9fa45c8
 # ╟─a8fd8281-20a9-44ea-bc4c-bc01d5de831a
 # ╟─f4663105-f638-40d9-9097-d056d5395469
-# ╟─1d1db980-d16d-4816-b034-fa41b9e094c7
+# ╠═1d1db980-d16d-4816-b034-fa41b9e094c7
+# ╠═4a39a2ce-ed40-4bcf-8099-87a5d9ca8c21
+# ╠═2bde00c6-c392-4b59-ae56-71636cbd8131
 # ╟─edb4c7e4-32a3-499c-b78d-27dd0e1e9dda
 # ╟─7d6cfaff-914d-472b-94fb-cc7b9ba2665e
-# ╟─e9211016-9383-45e7-a615-03b069fa4b52
+# ╠═e9211016-9383-45e7-a615-03b069fa4b52
 # ╟─cf994c7e-2f3b-45eb-8214-2c6a67adf47b
 # ╟─ab5539ad-67a9-422b-b67e-d210ef0ae4de
 # ╟─a33f011b-2eb1-4eb5-86f6-ff2883577fcb
